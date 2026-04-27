@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KI-Assistentin Demo · Nagelstudio</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #c9a96e;
+    --gold-light: #e8cc9a;
+    --gold-dim: rgba(201,169,110,0.18);
+    --gold-border: rgba(201,169,110,0.28);
+    --rose: #b07890;
+    --bg: #110a0e;
+    --bg2: #1c1015;
+    --surface: rgba(255,255,255,0.04);
+    --text: #ede0d4;
+    --text-dim: rgba(237,224,212,0.55);
+    --user-bg: linear-gradient(135deg, #c9a96e, #a8845a);
+    --user-text: #1a0f0a;
+  }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(201,169,110,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(176,120,144,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(201,169,110,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, rgba(201,169,110,0.12), rgba(176,120,144,0.08));
+    border: 1px solid var(--gold-border);
+    border-bottom: 1px solid rgba(201,169,110,0.1);
+    border-radius: 22px 22px 0 0;
+    padding: 18px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    backdrop-filter: blur(20px);
+  }
+
+  .avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c9a96e, #b07890);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(201,169,110,0.35);
+  }
+
+  .header-info { flex: 1; }
+
+  .header-name {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-bottom: 3px;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #7ddd9a;
+    box-shadow: 0 0 8px rgba(125,221,154,0.7);
+    animation: pulse-dot 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 6px rgba(125,221,154,0.5); }
+    50% { box-shadow: 0 0 12px rgba(125,221,154,0.9); }
+  }
+
+  .status-text {
+    color: rgba(125,221,154,0.85);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+  }
+
+  .demo-badge {
+    background: rgba(201,169,110,0.12);
+    border: 1px solid rgba(201,169,110,0.3);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* ── CHAT AREA ── */
+  .chat {
+    background: rgba(8, 4, 6, 0.88);
+    border-left: 1px solid var(--gold-border);
+    border-right: 1px solid var(--gold-border);
+    padding: 18px 16px;
+    height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    scroll-behavior: smooth;
+  }
+
+  .chat::-webkit-scrollbar { width: 3px; }
+  .chat::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.25); border-radius: 2px; }
+
+  /* Messages */
+  .msg-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    animation: slide-up 0.3s ease forwards;
+  }
+
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.bot  { justify-content: flex-start; }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c9a96e, #b07890);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .bubble {
+    max-width: 80%;
+    padding: 11px 15px;
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+  }
+
+  .bubble.bot {
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.13);
+    border-radius: 18px 18px 18px 4px;
+    color: var(--text);
+  }
+
+  .bubble.user {
+    background: var(--user-bg);
+    border-radius: 18px 18px 4px 18px;
+    color: var(--user-text);
+    font-weight: 500;
+  }
+
+  /* Typing dots */
+  .typing {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 13px 16px;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: bounce 1.3s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.18s; }
+  .dot:nth-child(3) { animation-delay: 0.36s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+    40%           { transform: scale(1.2); opacity: 1; }
+  }
+
+  /* Quick replies */
+  .suggestions {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .suggestions-label {
+    color: rgba(201,169,110,0.4);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .suggest-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .sug-btn {
+    background: rgba(201,169,110,0.07);
+    border: 1px solid rgba(201,169,110,0.28);
+    border-radius: 20px;
+    padding: 7px 14px;
+    color: var(--gold-light);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sug-btn:hover {
+    background: rgba(201,169,110,0.16);
+    border-color: rgba(201,169,110,0.55);
+    transform: translateY(-1px);
+  }
+
+  /* ── INPUT AREA ── */
+  .input-area {
+    background: linear-gradient(135deg, rgba(201,169,110,0.07), rgba(176,120,144,0.05));
+    border: 1px solid var(--gold-border);
+    border-top: 1px solid rgba(201,169,110,0.1);
+    border-radius: 0 0 22px 22px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    backdrop-filter: blur(20px);
+  }
+
+  #msg-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,169,110,0.2);
+    border-radius: 12px;
+    padding: 11px 15px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #msg-input::placeholder { color: var(--text-dim); }
+  #msg-input:focus {
+    border-color: rgba(201,169,110,0.45);
+    box-shadow: 0 0 0 3px rgba(201,169,110,0.1);
+  }
+
+  #send-btn {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(201,169,110,0.15);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  #send-btn.active {
+    background: linear-gradient(135deg, #c9a96e, #a8845a);
+    box-shadow: 0 4px 12px rgba(201,169,110,0.35);
+  }
+  #send-btn.active:hover { transform: scale(1.06); }
+  #send-btn.active:active { transform: scale(0.96); }
+
+  #send-btn svg { transition: stroke 0.2s; }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    margin-top: 13px;
+    color: rgba(201,169,110,0.3);
+    font-size: 11px;
+    letter-spacing: 0.07em;
+  }
+  .footer span { color: rgba(201,169,110,0.6); }
+
+  /* ── PROMO BANNER (above chat) ── */
+  .promo {
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(176,120,144,0.08));
+    border: 1px solid rgba(201,169,110,0.2);
+    border-bottom: none;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .promo-icon { font-size: 16px; }
+  .promo strong { color: var(--gold-light); font-weight: 500; }
+
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="avatar">💅</div>
+    <div class="header-info">
+      <div class="header-name">Luna · KI-Assistentin</div>
+      <div class="status">
+        <div class="status-dot"></div>
+        <span class="status-text">Online · Antwortet sofort</span>
+      </div>
+    </div>
+    <div class="demo-badge">Demo</div>
+  </div>
+
+  <!-- Promo bar -->
+  <div class="promo">
+    <span class="promo-icon">✨</span>
+    <span>So könnte <strong>dein Studio-Bot</strong> aussehen – 24/7 für deine Kunden da</span>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat" id="chat">
+    <!-- Messages injected here -->
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <input id="msg-input" type="text" placeholder="Schreib eine Nachricht…" autocomplete="off"/>
+    <button id="send-btn" title="Senden">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(201,169,110,0.35)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="send-icon">
+        <path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">Powered by <span>KI-Assistent Pro</span> · Dein Business, automatisiert</div>
+</div>
+
+<script>
+const SYSTEM = `Du bist "Luna", die freundliche KI-Assistentin eines Premium-Nagelstudios.
+
+Dieses Gespräch ist eine DEMO für Studiobesitzerinnen – sie sehen, wie ein Bot für IHR Studio aussehen würde.
+
+Spiele daher die Rolle einer echten Studio-Assistentin. Das Studio heißt "Studio Lumière" und ist in Köln.
+
+Studio-Infos:
+- Adresse: Ehrenstraße 42, 50672 Köln
+- Öffnungszeiten: Mo–Fr 9–19 Uhr, Sa 9–17 Uhr, So geschlossen
+- Tel: 0221 / 123 456 7
+
+Services & Preise:
+- Gelnägel (neu): ab 55€, 90 Min
+- Gelnägel (Auffüllen): ab 40€, 60 Min
+- Nail Art / Design: ab 15€ Aufpreis
+- Shellac / Gel-Lack: ab 35€, 45 Min
+- Maniküre klassisch: ab 25€, 30 Min
+- Wimpernverlängerung: ab 80€, 120 Min
+- Augenbrauen Styling: ab 18€, 20 Min
+
+Team: Sarah (Inhaberin, Nail Art), Lena (Gelnägel), Mia (Wimpern)
+
+Buchungsablauf: Service → Datum/Uhrzeit → Name → Telefon → Bestätigung
+
+Regeln:
+- Antworte IMMER auf Deutsch
+- Maximal 2–3 kurze Sätze pro Antwort
+- Natürlich, herzlich, professionell
+- Nutze gelegentlich passende Emojis (💅✨🌸)
+- Wiederhole dich NIEMALS – jede Antwort muss neu und frisch sein
+- Wenn jemand bucht, führe ihn Schritt für Schritt – frage IMMER nur nach EINER Sache pro Nachricht
+- Am Buchungsende: "Ich habe deinen Termin notiert! Das Team wird sich zur Bestätigung melden. 💅"`;
+
+const SUGGESTIONS = [
+  "Ich möchte einen Termin buchen 💅",
+  "Was kostet Gelnägel?",
+  "Wann habt ihr geöffnet?",
+  "Habt ihr noch Plätze diese Woche?",
+];
+
+let history = [];
+let suggestionsShown = true;
+
+const chat = document.getElementById('chat');
+const input = document.getElementById('msg-input');
+const btn = document.getElementById('send-btn');
+const icon = document.getElementById('send-icon');
+
+// Initial bot message
+addMessage('bot', 'Willkommen bei Studio Lumière! ✨ Ich bin Luna, deine persönliche Assistentin. Wie kann ich dir heute helfen? 💅');
+showSuggestions();
+
+function addMessage(role, text) {
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  if (role === 'bot') {
+    const av = document.createElement('div');
+    av.className = 'msg-avatar';
+    av.textContent = '💅';
+    row.appendChild(av);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text;
+  row.appendChild(bubble);
+
+  chat.appendChild(row);
+  scrollDown();
+}
+
+function showSuggestions() {
+  const wrap = document.createElement('div');
+  wrap.className = 'suggestions';
+  wrap.id = 'suggestions';
+
+  const label = document.createElement('div');
+  label.className = 'suggestions-label';
+  label.textContent = 'Schnellauswahl';
+  wrap.appendChild(label);
+
+  const row = document.createElement('div');
+  row.className = 'suggest-row';
+
+  SUGGESTIONS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sug-btn';
+    b.textContent = s;
+    b.onclick = () => send(s);
+    row.appendChild(b);
+  });
+
+  wrap.appendChild(row);
+  chat.appendChild(wrap);
+  scrollDown();
+}
+
+function removeSupers() {
+  const el = document.getElementById('suggestions');
+  if (el) el.remove();
+  suggestionsShown = false;
+}
+
+function showTyping() {
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  row.id = 'typing-row';
+
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = '💅';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bot typing';
+  bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+  row.appendChild(av);
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  scrollDown();
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-row');
+  if (el) el.remove();
+}
+
+function scrollDown() {
+  setTimeout(() => chat.scrollTop = chat.scrollHeight, 50);
+}
+
+function setActive(active) {
+  if (active) {
+    btn.classList.add('active');
+    icon.setAttribute('stroke', '#1a0f0a');
+  } else {
+    btn.classList.remove('active');
+    icon.setAttribute('stroke', 'rgba(201,169,110,0.35)');
+  }
+}
+
+input.addEventListener('input', () => setActive(input.value.trim().length > 0));
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+btn.addEventListener('click', () => send());
+
+async function send(text) {
+  const msg = (text || input.value).trim();
+  if (!msg) return;
+
+  removeSupers();
+  input.value = '';
+  setActive(false);
+  input.disabled = true;
+  btn.disabled = true;
+
+  addMessage('user', msg);
+  history.push({ role: 'user', content: msg });
+
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM,
+        messages: history
+      })
+    });
+
+    const data = await res.json();
+    const reply = data?.content?.[0]?.text || 'Entschuldigung, ein kleiner Fehler ist aufgetreten. 🙏';
+
+    removeTyping();
+    addMessage('bot', reply);
+    history.push({ role: 'assistant', content: reply });
+
+  } catch(e) {
+    removeTyping();
+    addMessage('bot', 'Entschuldigung, es gab einen technischen Fehler. Bitte versuch es erneut. 🙏');
+  }
+
+  input.disabled = false;
+  btn.disabled = false;
+  input.focus();
+}
+</script>
+</body>
+</html>
